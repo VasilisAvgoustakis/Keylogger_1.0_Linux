@@ -48,5 +48,5 @@ def on_key():
 
 
 
-
+#calls the function (on_key) whenever a key is pressed
 keyboard.hook(on_key())
